@@ -2,6 +2,8 @@
 // 100种不可思议旅行 — 前端应用逻辑 (Mock 数据驱动)
 // ============================================================
 
+import { filterAndRecommend } from './recommend.js';
+
 // ------------------------------------------------------
 // 1. Mock 数据（从 SQLite 样例数据映射）
 // ------------------------------------------------------
@@ -555,7 +557,7 @@ function openExplore() {
       </div>
 
       <button onclick="applyExploreFilters()" class="w-full py-3 rounded-xl bg-white text-deep font-bold text-sm hover:bg-gray-100 transition-colors">
-        应用筛选 · 显示 ${state.filteredTravels.length} 个结果
+        应用筛选
       </button>
     </div>
   `;
@@ -617,15 +619,23 @@ function toggleTag(tag) {
 }
 
 function applyExploreFilters() {
-  state.filteredTravels = state.travels.filter(t => {
-    if (t.rarity_score < state.filters.minRarity) return false;
-    if (t.visual_impact < state.filters.minVisual) return false;
-    if (t.healing_vibe < state.filters.minHealing) return false;
-    if (state.filters.category !== 'all' && t.category !== state.filters.category) return false;
-    if (state.filters.tags.length > 0 && !state.filters.tags.some(tag => t.tags.includes(tag))) return false;
-    return true;
-  });
+  const preferences = {
+    targetRarity: state.filters.minRarity,
+    emotionTags: state.filters.tags,
+    minRarity: state.filters.minRarity,
+    minVisual: state.filters.minVisual,
+    minHealing: state.filters.minHealing,
+  };
 
+  const recommended = filterAndRecommend(state.travels, preferences);
+  let travels = recommended.map(r => r.travel);
+
+  // category 作为额外硬过滤
+  if (state.filters.category !== 'all') {
+    travels = travels.filter(t => t.category === state.filters.category);
+  }
+
+  state.filteredTravels = travels;
   state.activeFilter = state.filters.category !== 'all' ? state.filters.category : 'all';
   renderFilterBar();
   renderWaterfall();
