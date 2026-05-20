@@ -161,15 +161,91 @@ const mockTravels = [
   }
 ];
 
-const mockEmotions = [
-  { id: 1, user: { nickname: '午夜飞行', avatar_url: null, archetype: 'z_gen' }, content: '看到这片蓝的时候，我忽然原谅了去年所有熬过的夜。', emotion_tag: 'healed', created_at: '2025-05-18T14:22:00Z' },
-  { id: 2, user: { nickname: '反方向时钟', avatar_url: null, archetype: 'rebel' }, content: '游客手册上没有的地方，才是地球真正的样子。', emotion_tag: 'inspired', created_at: '2025-05-17T09:15:00Z' },
-  { id: 3, user: { nickname: '像素猎人', avatar_url: null, archetype: 'visual_hunter' }, content: '相机拍不出那种蓝，它有一种穿透视网膜的质地。', emotion_tag: 'amazed', created_at: '2025-05-16T21:40:00Z' }
-];
+// 每个旅行项目的默认情绪共鸣（作为 seed 数据）
+const defaultEmotionsBySlug = {
+  'iceland-highland-blue-lagoon': [
+    { id: 1, user: { nickname: '午夜飞行', avatar_url: null, archetype: 'z_gen' }, content: '看到这片蓝的时候，我忽然原谅了去年所有熬过的夜。', emotion_tag: 'healed', created_at: '2025-05-18T14:22:00Z' },
+    { id: 2, user: { nickname: '反方向时钟', avatar_url: null, archetype: 'rebel' }, content: '游客手册上没有的地方，才是地球真正的样子。', emotion_tag: 'inspired', created_at: '2025-05-17T09:15:00Z' },
+    { id: 3, user: { nickname: '像素猎人', avatar_url: null, archetype: 'visual_hunter' }, content: '相机拍不出那种蓝，它有一种穿透视网膜的质地。', emotion_tag: 'amazed', created_at: '2025-05-16T21:40:00Z' }
+  ],
+  'ethiopia-danakil-depression': [
+    { id: 4, user: { nickname: '地心探险家', avatar_url: null, archetype: 'rebel' }, content: '50度的空气里，每一口呼吸都在提醒你：这里不属于人类。', emotion_tag: 'amazed', created_at: '2025-05-15T10:10:00Z' },
+    { id: 5, user: { nickname: '盐壳行者', avatar_url: null, archetype: 'visual_hunter' }, content: '那种荧光色不是地球该有的配色，像打翻了一整盒霓虹颜料。', emotion_tag: 'amazed', created_at: '2025-05-14T18:30:00Z' }
+  ],
+  'faroe-islands-lake-sorvagsvatn': [
+    { id: 6, user: { nickname: '雾岛居民', avatar_url: null, archetype: 'visual_hunter' }, content: '风大到站不稳，但那一刻我觉得自己是被天空选中的。', emotion_tag: 'wanderlust', created_at: '2025-05-13T08:45:00Z' },
+    { id: 7, user: { nickname: '大西洋失眠者', avatar_url: null, archetype: 'z_gen' }, content: '湖水悬在海上的瞬间，我对「不可能」三个字产生了怀疑。', emotion_tag: 'inspired', created_at: '2025-05-12T22:15:00Z' }
+  ],
+  'mexico-naica-crystal-cave': [
+    { id: 8, user: { nickname: '地下策展人', avatar_url: null, archetype: 'rebel' }, content: '58度的地狱里，藏着地球最沉默的珠宝展。', emotion_tag: 'amazed', created_at: '2025-05-11T14:00:00Z' }
+  ],
+  'japan-aomori-towada-art-center': [
+    { id: 9, user: { nickname: '森林画廊', avatar_url: null, archetype: 'visual_hunter' }, content: '奈良美智的狗在树林里等我，比任何约会都准时。', emotion_tag: 'healed', created_at: '2025-05-10T11:20:00Z' },
+    { id: 10, user: { nickname: '白桦树影', avatar_url: null, archetype: 'z_gen' }, content: '艺术和自然在这里不是邻居，是恋人。', emotion_tag: 'healed', created_at: '2025-05-09T16:50:00Z' },
+    { id: 11, user: { nickname: '溪流旁听者', avatar_url: null, archetype: 'healing' }, content: '坐在河边听了一下午水声，草间弥生的南瓜在旁边陪着我。', emotion_tag: 'healed', created_at: '2025-05-08T09:10:00Z' }
+  ],
+  'namibia-deadvlei': [
+    { id: 12, user: { nickname: '红沙丘过客', avatar_url: null, archetype: 'visual_hunter' }, content: '那些树死了九百年，却比活着的任何一棵树都有尊严。', emotion_tag: 'melancholy', created_at: '2025-05-07T06:30:00Z' },
+    { id: 13, user: { nickname: '日出收集者', avatar_url: null, archetype: 'rebel' }, content: '枯树的影子在盐地上移动，像地球自己的钟表。', emotion_tag: 'inspired', created_at: '2025-05-06T19:00:00Z' }
+  ]
+};
+
+// ============================================================
+// 2. 本地存储层 —— 模拟数据库持久化
+// ============================================================
+const DB = {
+  KEY_CHECKINS: 'holu100_checkins_v1',
+  KEY_EMOTIONS: 'holu100_emotions_v1',
+
+  getCheckIns() {
+    try {
+      const raw = localStorage.getItem(this.KEY_CHECKINS);
+      return raw ? new Set(JSON.parse(raw)) : new Set();
+    } catch { return new Set(); }
+  },
+
+  saveCheckIns(set) {
+    localStorage.setItem(this.KEY_CHECKINS, JSON.stringify([...set]));
+  },
+
+  getEmotions() {
+    try {
+      const raw = localStorage.getItem(this.KEY_EMOTIONS);
+      return raw ? JSON.parse(raw) : {};
+    } catch { return {}; }
+  },
+
+  saveEmotions(map) {
+    localStorage.setItem(this.KEY_EMOTIONS, JSON.stringify(map));
+  },
+
+  // 首次访问时初始化 seed 数据到 localStorage
+  initSeedData() {
+    if (!localStorage.getItem(this.KEY_EMOTIONS)) {
+      this.saveEmotions(JSON.parse(JSON.stringify(defaultEmotionsBySlug)));
+    }
+    // 基于 seed 数据校准各项目的 emotion_count
+    const emotions = this.getEmotions();
+    mockTravels.forEach(t => {
+      const list = emotions[t.slug] || defaultEmotionsBySlug[t.slug] || [];
+      t.emotion_count = list.length;
+    });
+  }
+};
+
+DB.initSeedData();
 
 // ------------------------------------------------------
-// 2. 状态管理
+// 3. 状态管理（从 localStorage 恢复用户交互状态）
 // ------------------------------------------------------
+const storedCheckIns = DB.getCheckIns();
+
+// 校准 check_in_count：把已持久化的用户打卡合并到基准计数中
+storedCheckIns.forEach(slug => {
+  const travel = mockTravels.find(t => t.slug === slug);
+  if (travel) travel.check_in_count++;
+});
+
 let state = {
   travels: [...mockTravels],
   filteredTravels: [...mockTravels],
@@ -181,14 +257,14 @@ let state = {
     minHealing: 1,
     tags: []
   },
-  checkedIn: new Set(),
+  checkedIn: storedCheckIns,
   detailOpen: false,
   exploreOpen: false,
   currentTravel: null
 };
 
 // ------------------------------------------------------
-// 3. 工具函数
+// 4. 工具函数
 // ------------------------------------------------------
 const formatNumber = (n) => n >= 1000 ? (n / 1000).toFixed(1) + 'k' : n;
 
@@ -431,7 +507,7 @@ function openDetail(slug) {
 
         <!-- 共鸣列表 -->
         <div id="emotionList" class="space-y-4 mb-6">
-          ${mockEmotions.map(e => `
+          ${(DB.getEmotions()[travel.slug] || defaultEmotionsBySlug[travel.slug] || []).map(e => `
             <div class="flex gap-3">
               <div class="w-8 h-8 rounded-full bg-gradient-to-br from-accent-cyan/30 to-accent-amber/30 flex items-center justify-center text-xs font-bold text-white flex-shrink-0">
                 ${e.user.nickname[0]}
@@ -646,6 +722,8 @@ function handleCheckIn(slug) {
   if (state.checkedIn.has(slug)) return;
 
   state.checkedIn.add(slug);
+  DB.saveCheckIns(state.checkedIn);
+
   const travel = state.travels.find(t => t.slug === slug);
   if (travel) travel.check_in_count++;
 
@@ -678,10 +756,15 @@ function submitEmotion() {
     created_at: new Date().toISOString()
   };
 
-  mockEmotions.unshift(newEmotion);
-
+  // 写入模拟数据库（localStorage）
   if (state.currentTravel) {
-    state.currentTravel.emotion_count++;
+    const slug = state.currentTravel.slug;
+    const allEmotions = DB.getEmotions();
+    if (!allEmotions[slug]) allEmotions[slug] = [];
+    allEmotions[slug].unshift(newEmotion);
+    DB.saveEmotions(allEmotions);
+
+    state.currentTravel.emotion_count = allEmotions[slug].length;
   }
 
   const list = document.getElementById('emotionList');
@@ -738,4 +821,17 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   window.addEventListener('scroll', handleScroll, { passive: true });
+});
+
+// 将交互函数暴露到全局，供模板中的 onclick 调用
+Object.assign(window, {
+  openDetail,
+  closeDetail,
+  handleCheckIn,
+  submitEmotion,
+  closeExplore,
+  updateSlider,
+  setCategory,
+  toggleTag,
+  applyExploreFilters
 });
